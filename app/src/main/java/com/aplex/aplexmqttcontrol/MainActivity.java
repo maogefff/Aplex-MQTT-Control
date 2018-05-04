@@ -45,94 +45,57 @@ public class MainActivity extends AppCompatActivity {
 
     MqttConnectOptions options = null;
     MqttClient client = null;
+    MemoryPersistence memPer = null;
 
-    String ledValue;
-    String digitalTubeValue;
+    int ledValue;
+    int digitalTubeValue;
     String gatewayValue;
     String topic;
+    IsConnThread isConnThread = null;
 
-    Button testButtonID;
-    Button testConnID;
-    int status = 0;
-    Byte tmp;
-
-    void test(){
-        testButtonID = findViewById(R.id.testButtonID);
-        testConnID = findViewById(R.id.testConnID);
-
-        testConnID.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    Log.d(TAG, "断开连接");
-                    client.disconnect();
-                    statImage.setImageResource(R.mipmap.led_gray);
-                    statText.setText("未连接");
-                } catch (MqttException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-
-        testButtonID.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                JSONObject jsonObject = new JSONObject();
-                Log.d(TAG, "22222222222 status="+status);
-                switch (status){
-                    case 0:
-                        tmp = 1;
-                        break;
-                    case 1:
-                        tmp = (1<<1);
-                        break;
-                    case 2:
-                        tmp = (1<<2);
-                        break;
-                    case 3:
-                        tmp = (1<<3);
-                        break;
-                    case 4:
-                        tmp = (1<<4);
-                        break;
-                    case 5:
-                        tmp = (1<<5);
-                        break;
-                    case 6:
-                        tmp = 0x7f;
-                        break;
-                }
-                status= (++status)%7;
-                try {
-                    jsonObject.put("gateway_id", gatewayValue);
-                    jsonObject.put("device_id", String.valueOf(1));
-                    jsonObject.put("funcode", String.valueOf(1));
-                    jsonObject.put("value", String.valueOf(tmp));
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-
-                try {
-                    MqttMessage message = new MqttMessage();
-                    message.setPayload(jsonObject.toString().getBytes());
-                    client.publish(topic, message);
-                } catch (MqttException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d(TAG, "onCreate");
         setContentView(R.layout.activity_main);
-
         initView();
-        initMqtt();
         setOnClickListener();
+//        isConnThread = new IsConnThread();
+//        isConnThread.start();
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                while (!isInterrupted()){
+//                    if(client==null || !client.isConnected()){
+//                        disCommHandler();
+//                    }
+//                    try {
+//                        Thread.sleep(1000);
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//        }).start();
+    }
 
-        test();
+
+    class IsConnThread extends Thread{
+        @Override
+        public void run() {
+            super.run();
+            while (!isInterrupted()){
+                if(client==null || !client.isConnected()){
+                    disCommHandler();
+                }
+                try {
+                    Thread.sleep(10000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     private void initView(){
@@ -163,9 +126,7 @@ public class MainActivity extends AppCompatActivity {
                 String[] gateway = getResources().getStringArray(R.array.deviceOptionValue);
                 gatewayValue = gateway[i];
 
-                if(!client.isConnected()){
-                    Toast.makeText(MainActivity.this, "已断开，请重新连接", Toast.LENGTH_SHORT).show();
-                    initMqtt();
+                if(client==null ||  !client.isConnected()){
                     return;
                 }
 
@@ -200,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 String[] value = getResources().getStringArray(R.array.ledStatusValue);
-                ledValue = value[i];
+                ledValue = Integer.valueOf(value[i]);
                 if(!gatewayValue.equals("0")) {
                     publishLed();
                 }
@@ -216,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 String[] res = getResources().getStringArray(R.array.digitalTubeID);
-                digitalTubeValue = res[i];
+                digitalTubeValue = Integer.valueOf(res[i]);
                 if(!gatewayValue.equals("0")) {
                     publishDigitalTube();
                 }
@@ -232,14 +193,13 @@ public class MainActivity extends AppCompatActivity {
 
     private void publishLed(){
         if(!client.isConnected()){
-            Toast.makeText(MainActivity.this, "已断开，请重新连接", Toast.LENGTH_SHORT).show();
             return;
         }
         JSONObject jsonObject = new JSONObject();
         try {
             jsonObject.put("gateway_id", gatewayValue);
-            jsonObject.put("device_id", String.valueOf(1));
-            jsonObject.put("funcode", String.valueOf(2));
+            jsonObject.put("device_id", 1);
+            jsonObject.put("funcode", 2);
             jsonObject.put("value", ledValue);
             Log.d(TAG, "发送：gateway_id="+gatewayValue+"; device_id="+1+"; funcode="+2+"; value="+ledValue);
         } catch (JSONException e) {
@@ -258,36 +218,32 @@ public class MainActivity extends AppCompatActivity {
     private  void publishDigitalTube(){
         JSONObject jsonObject = new JSONObject();
         if(!client.isConnected()){
-            Toast.makeText(MainActivity.this, "已断开，请重新连接", Toast.LENGTH_SHORT).show();
             return;
-        }
-        //发送数码管
-        try {
-            jsonObject.put("gateway_id", gatewayValue);
-            jsonObject.put("device_id", String.valueOf(1));
-            jsonObject.put("funcode", String.valueOf(3));
-            jsonObject.put("value", digitalTubeValue);
-            Log.d(TAG, "发送：gateway_id="+gatewayValue+"; device_id="+1+"; funcode="+3+"; value="+digitalTubeValue);
-        } catch (JSONException e) {
-            e.printStackTrace();
         }
 
         try {
+            jsonObject.put("gateway_id", gatewayValue);
+            jsonObject.put("device_id", 1);
+            jsonObject.put("funcode", 3);
+            jsonObject.put("value", digitalTubeValue);
+            Log.d(TAG, "发送：gateway_id="+gatewayValue+"; device_id="+1+"; funcode="+3+"; value="+digitalTubeValue);
+
             MqttMessage message = new MqttMessage();
             message.setPayload(jsonObject.toString().getBytes());
             client.publish(topic, message);
         } catch (MqttException e) {
             e.printStackTrace();
+        }catch (JSONException e){
+            e.printStackTrace();
         }
     }
     private void subscribeTopic(String topic){
         if(!client.isConnected()){
-            Toast.makeText(MainActivity.this, "已断开，请重新连接", Toast.LENGTH_SHORT).show();
             return;
         }
         try {
-            client.subscribe(topic);
             Log.d(TAG, "subscribeTopic: "+topic);
+            client.subscribe(topic);
         } catch (MqttException e) {
             e.printStackTrace();
         }
@@ -295,7 +251,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void unsubscribeTopic(String topic){
         if(!client.isConnected()){
-            Toast.makeText(MainActivity.this, "已断开，请重新连接", Toast.LENGTH_SHORT).show();
             return;
         }
         try {
@@ -314,16 +269,15 @@ public class MainActivity extends AppCompatActivity {
         options.setUserName(userName);
         options.setPassword(password);
         options.setConnectionTimeout(10);
-        // 心跳包发送间隔，单位：秒
         options.setKeepAliveInterval(20);
 
-        MemoryPersistence memPer = new MemoryPersistence();
+        memPer = new MemoryPersistence();
         //实例化MQTT客户端对象
         Random  random=new Random();
         clientId = "DeviceID-Android-"+String.valueOf(random.nextInt(999999));
+        Log.d(TAG, "客户端ID："+clientId);
         try {
             client = new MqttClient("tcp://"+serverURI+":"+String.valueOf(port), clientId, memPer);
-            //回调函数
             client.setCallback(mqttCallback);
         } catch (MqttException e) {
             e.printStackTrace();
@@ -333,18 +287,18 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {
-                    Log.d(TAG, "连接中...");
                     client.connect(options);
-                    Log.d(TAG, "连接成功...");
                 } catch (MqttException e) {
                     e.printStackTrace();
                 }
                 new Handler(Looper.getMainLooper()).post(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(MainActivity.this, "连接成功", Toast.LENGTH_SHORT).show();
-                        statImage.setImageResource(R.mipmap.led_blue);
-                        statText.setText("已连接");
+                        if(client.isConnected()){
+                            Toast.makeText(MainActivity.this, "连接成功", Toast.LENGTH_SHORT).show();
+                            statImage.setImageResource(R.mipmap.led_blue);
+                            statText.setText("已连接");
+                        }
                     }
                 });
             }
@@ -395,13 +349,70 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void connectionLost(Throwable arg0) {
             Log.d(TAG, "Mqtt出事连接，重连");
-            Toast.makeText(MainActivity.this, "已断开，请重新连接", Toast.LENGTH_SHORT).show();
-            try {
-                client.disconnect();
-            } catch (MqttException e) {
-                e.printStackTrace();
-            }
-            initMqtt();
+            disCommHandler();
         }
     };
+
+    private void disCommHandler(){
+        if(client==null){
+            Log.d(TAG, "init mqtt");
+            initMqtt();
+        }else {
+            Log.d(TAG, "reconnect mqtt");
+
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "已断开，正在重新连接中...", Toast.LENGTH_SHORT).show();
+                            statImage.setImageResource(R.mipmap.led_gray);
+                            statText.setText("未连接");
+                        }
+                    });
+
+                    try {
+                        client.disconnect();
+                        //可能阻塞
+                        client.connect(options);
+                    } catch (MqttException e) {
+                        e.printStackTrace();
+                    }
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if(client.isConnected()){
+                                Toast.makeText(MainActivity.this, "连接成功", Toast.LENGTH_SHORT).show();
+                                statImage.setImageResource(R.mipmap.led_blue);
+                                statText.setText("已连接");
+                            }
+                        }
+                    });
+                }
+            }).start();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "onDestroy");
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.d(TAG, "onStart");
+        isConnThread = new IsConnThread();
+        isConnThread.start();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.d(TAG, "onStop");
+        isConnThread.interrupt();
+    }
 }

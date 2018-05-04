@@ -324,18 +324,6 @@
 
         </LinearLayout>
 
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:text="测试button"
-            android:id="@+id/testButtonID"/>
-
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:text="断开"
-            android:id="@+id/testConnID"/>
-
         <LinearLayout
             android:layout_width="0dp"
             android:layout_weight="1"
