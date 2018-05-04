@@ -1,0 +1,48 @@
+<resources>
+    <string name="app_name">AplexMQTTControl</string>
+
+    <string-array name="deviceOption">
+        <item>Please Select Device</item>
+        <item>5100</item>
+        <item>5102</item>
+        <item>5130</item>
+        <item>5140</item>
+    </string-array>
+
+    <string-array name="deviceOptionValue">
+        <item>0</item>
+        <item>5100</item>
+        <item>5102</item>
+        <item>5130</item>
+        <item>5140</item>
+    </string-array>
+
+    <string-array name="ledStatus">
+        <item>All On</item>
+        <item>All Off</item>
+        <item>Blinking</item>
+        <item>Marquee lamp</item>
+    </string-array>
+
+    <string-array name="ledStatusValue">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+
+    <string-array name="digitalTubeID">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+    </string-array>
+
+
+</resources>
