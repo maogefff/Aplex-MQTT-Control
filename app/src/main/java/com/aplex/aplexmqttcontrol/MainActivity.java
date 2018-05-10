@@ -1,5 +1,6 @@
 package com.aplex.aplexmqttcontrol;
 
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
@@ -37,11 +38,14 @@ public class MainActivity extends AppCompatActivity {
     Spinner deviceOption;
     Spinner led;
     Spinner digitalTube;
+    Spinner city;
 
     ImageView light[];
     ImageView statImage;
     TextView statText;
     TextView temp;
+
+    Button subscribe;
 
     MqttConnectOptions options = null;
     MqttClient client = null;
@@ -49,10 +53,12 @@ public class MainActivity extends AppCompatActivity {
 
     int ledValue;
     int digitalTubeValue;
-    String gatewayValue;
-    String topic;
-    IsConnThread isConnThread = null;
+    String gatewayValue;    //
+    String cityValue;
+    String subscribeTopic;    //
+    String publishTopic;
 
+    IsConnThread isConnThread = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,23 +67,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         initView();
         setOnClickListener();
-//        isConnThread = new IsConnThread();
-//        isConnThread.start();
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                while (!isInterrupted()){
-//                    if(client==null || !client.isConnected()){
-//                        disCommHandler();
-//                    }
-//                    try {
-//                        Thread.sleep(1000);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//            }
-//        }).start();
     }
 
 
@@ -85,16 +74,20 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void run() {
             super.run();
-            while (!isInterrupted()){
+            //while (!isInterrupted()){
+            while (!Thread.currentThread().isInterrupted()){
                 if(client==null || !client.isConnected()){
                     disCommHandler();
                 }
                 try {
                     Thread.sleep(10000);
+                    Log.d(TAG, "Threadid="+Thread.currentThread().getName());
                 } catch (InterruptedException e) {
                     e.printStackTrace();
+                    break;
                 }
             }
+            Log.d(TAG,"thread is over: "+Thread.currentThread().getName());
         }
     }
 
@@ -103,7 +96,10 @@ public class MainActivity extends AppCompatActivity {
 
         deviceOption  = (Spinner)findViewById(R.id.devOptID);
         led = (Spinner)findViewById(R.id.ledID);
+        city = (Spinner)findViewById(R.id.cityOptID);
         digitalTube = (Spinner)findViewById(R.id.digitalTubeID);
+
+        subscribe = (Button) findViewById(R.id.subscribeID);
 
         statImage = (ImageView)findViewById(R.id.statusImage);
         statText = (TextView)findViewById(R.id.statusText);
@@ -117,38 +113,62 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setOnClickListener(){
+        subscribe.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String status = subscribe.getText().toString();
+                if(status.equals("Subscribe")){
+                    String currentTopic;
+                    status="Unsubscribe";
+                    currentTopic = "computex/"+cityValue+"/iot/" + gatewayValue + "/DataTransfer";
+                    publishTopic = "computex/"+cityValue+"/iot/" + gatewayValue + "/backend";
+
+                    SharedPreferences sp = getSharedPreferences("mydata", 0);
+                    SharedPreferences.Editor ed = sp.edit();
+                    ed.putString("publishTopic", publishTopic);
+                    ed.putString("subscribeTopic", subscribeTopic);
+                    ed.apply();
+
+                    if(subscribeTopic != null){
+                        unsubscribeTopic(subscribeTopic);
+                    }
+                    subscribeTopic = currentTopic;
+                    //订阅主题
+                    subscribeTopic(subscribeTopic);
+                    //发送led
+                    publishLed();
+                    //发送数码管
+                    publishDigitalTube();
+                    subscribe.setText(status);
+
+                }else{
+                    status = "Subscribe";
+                    subscribe.setText(status);
+                    if(subscribeTopic != null){
+                        unsubscribeTopic(subscribeTopic);
+                    }
+                }
+            }
+        });
+
+        city.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                String[] city = getResources().getStringArray(R.array.cityOptionValue);
+                cityValue = city[i];
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
 
         deviceOption.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                JSONObject jsonObject = new JSONObject();
-                String currentTopic;
                 String[] gateway = getResources().getStringArray(R.array.deviceOptionValue);
                 gatewayValue = gateway[i];
-
-                if(client==null ||  !client.isConnected()){
-                    return;
-                }
-
-                if(!gatewayValue.equals("0")){
-                    currentTopic = "computex/iot/" + gatewayValue + "/DataTransfer";
-                    if(topic != null){
-                        unsubscribeTopic(topic);
-                    }
-                    topic = currentTopic;
-                    subscribeTopic(topic);
-                    publishLed();
-                    publishDigitalTube();
-
-                    new Handler(Looper.getMainLooper()).post(new Runnable() {
-                        @Override
-                        public void run() {
-                            for(int i=0; i<6; i++){
-                                light[i].setImageResource(R.mipmap.led_gray);
-                            }
-                        }
-                    });
-                }
             }
 
             @Override
@@ -209,7 +229,8 @@ public class MainActivity extends AppCompatActivity {
         try {
             MqttMessage message = new MqttMessage();
             message.setPayload(jsonObject.toString().getBytes());
-            client.publish(topic, message);
+            Log.d(TAG, "publishTopic="+publishTopic);
+            client.publish(publishTopic, message);
         } catch (MqttException e) {
             e.printStackTrace();
         }
@@ -230,7 +251,8 @@ public class MainActivity extends AppCompatActivity {
 
             MqttMessage message = new MqttMessage();
             message.setPayload(jsonObject.toString().getBytes());
-            client.publish(topic, message);
+            Log.d(TAG, "publishTopic="+publishTopic);
+            client.publish(publishTopic, message);
         } catch (MqttException e) {
             e.printStackTrace();
         }catch (JSONException e){
@@ -407,6 +429,10 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "onStart");
         isConnThread = new IsConnThread();
         isConnThread.start();
+
+        SharedPreferences sp = getSharedPreferences("mydata", 0);
+        publishTopic = sp.getString("publishTopic", null);
+        subscribeTopic = sp.getString("subscribeTopic", null);
     }
 
     @Override
@@ -414,5 +440,6 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
         Log.d(TAG, "onStop");
         isConnThread.interrupt();
+        isConnThread = null;
     }
 }

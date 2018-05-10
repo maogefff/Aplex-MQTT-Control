@@ -1,12 +1,28 @@
 <resources>
     <string name="app_name">AplexMQTTControl</string>
 
+    <string-array name="cityOption">
+        <item>Select City</item>
+        <item>Beijing</item>
+        <item>Shanghai</item>
+        <item>Shenzhen</item>
+        <item>Taipei</item>
+    </string-array>
+
+    <string-array name="cityOptionValue">
+        <item>0</item>
+        <item>Beijing</item>
+        <item>Shanghai</item>
+        <item>Shenzhen</item>
+        <item>Taipei</item>
+    </string-array>
+
     <string-array name="deviceOption">
-        <item>Please Select Device</item>
-        <item>5100</item>
-        <item>5102</item>
-        <item>5130</item>
-        <item>5140</item>
+        <item>Select Device</item>
+        <item>ARiio-5100</item>
+        <item>ARiio-5102</item>
+        <item>ARiio-5130</item>
+        <item>ARiio-5140</item>
     </string-array>
 
     <string-array name="deviceOptionValue">
