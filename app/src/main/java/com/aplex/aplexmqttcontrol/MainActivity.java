@@ -7,6 +7,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -64,8 +66,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate");
+
         setContentView(R.layout.activity_main);
         initView();
+        initMqtt();
         setOnClickListener();
     }
 
@@ -74,11 +78,9 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void run() {
             super.run();
-            //while (!isInterrupted()){
-            while (!Thread.currentThread().isInterrupted()){
-                if(client==null || !client.isConnected()){
-                    disCommHandler();
-                }
+            while (!Thread.currentThread().isInterrupted() && !client.isConnected()){
+
+                disCommHandler();
                 try {
                     Thread.sleep(10000);
                     Log.d(TAG, "Threadid="+Thread.currentThread().getName());
@@ -87,7 +89,22 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 }
             }
-            Log.d(TAG,"thread is over: "+Thread.currentThread().getName());
+//            if(client==null || !client.isConnected()){
+//                disCommHandler();
+//            }
+            //while (!isInterrupted()){
+//            while (!Thread.currentThread().isInterrupted()){
+//                if(client==null || !client.isConnected()){
+//                    disCommHandler();
+//                }
+//                try {
+//                    Thread.sleep(10000);
+//                    Log.d(TAG, "Threadid="+Thread.currentThread().getName());
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                    break;
+//                }
+//            }
         }
     }
 
@@ -129,9 +146,6 @@ public class MainActivity extends AppCompatActivity {
                     ed.putString("subscribeTopic", subscribeTopic);
                     ed.apply();
 
-                    if(subscribeTopic != null){
-                        unsubscribeTopic(subscribeTopic);
-                    }
                     subscribeTopic = currentTopic;
                     //订阅主题
                     subscribeTopic(subscribeTopic);
@@ -290,14 +304,14 @@ public class MainActivity extends AppCompatActivity {
         options.setCleanSession(true);
         options.setUserName(userName);
         options.setPassword(password);
-        options.setConnectionTimeout(10);
-        options.setKeepAliveInterval(20);
+        options.setConnectionTimeout(5);
+        options.setKeepAliveInterval(10);
 
         memPer = new MemoryPersistence();
         //实例化MQTT客户端对象
         Random  random=new Random();
         clientId = "DeviceID-Android-"+String.valueOf(random.nextInt(999999));
-        Log.d(TAG, "客户端ID："+clientId);
+        Log.d(TAG, "clientID："+clientId);
         try {
             client = new MqttClient("tcp://"+serverURI+":"+String.valueOf(port), clientId, memPer);
             client.setCallback(mqttCallback);
@@ -309,7 +323,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {
+                    Log.d(TAG,"连接...");
                     client.connect(options);
+                    Log.d(TAG,"连接成功...");
                 } catch (MqttException e) {
                     e.printStackTrace();
                 }
@@ -371,7 +387,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void connectionLost(Throwable arg0) {
             Log.d(TAG, "Mqtt出事连接，重连");
-            disCommHandler();
+            isConnThread = new IsConnThread();
+            isConnThread.start();
         }
     };
 
@@ -396,9 +413,10 @@ public class MainActivity extends AppCompatActivity {
                     });
 
                     try {
-                        client.disconnect();
                         //可能阻塞
+                        Log.d(TAG,"连接...");
                         client.connect(options);
+                        Log.d(TAG,"连接成功...");
                     } catch (MqttException e) {
                         e.printStackTrace();
                     }
@@ -427,8 +445,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         Log.d(TAG, "onStart");
-        isConnThread = new IsConnThread();
-        isConnThread.start();
 
         SharedPreferences sp = getSharedPreferences("mydata", 0);
         publishTopic = sp.getString("publishTopic", null);
@@ -439,7 +455,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
         Log.d(TAG, "onStop");
-        isConnThread.interrupt();
-        isConnThread = null;
+        if(isConnThread!=null){
+            isConnThread.interrupt();
+            isConnThread = null;
+        }
     }
 }
