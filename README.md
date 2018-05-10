@@ -34,7 +34,11 @@ dependencies {
 ```
   
 ## 传输协议
-### 1. 数据格式(JSON)
+### 1. 主题
+* 订阅主题：·"computex/"+城市+"/iot/" + 网关id + "/DataTransfer"·
+* 发布主题：·"computex/"+城市+"/iot/" + 网关id + "/backend"·
+
+### 2. 数据格式(JSON)
 ```
 {
     "gateway_id":"5100",        // 网关设备id
