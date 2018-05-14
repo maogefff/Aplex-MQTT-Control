@@ -1,6 +1,7 @@
 package com.aplex.aplexmqttcontrol;
 
 import android.content.SharedPreferences;
+import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
@@ -26,6 +27,7 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
@@ -48,7 +50,8 @@ public class MainActivity extends AppCompatActivity {
     TextView temp;
 
     Button subscribe;
-
+    TextView digital;
+    TextView digitalbackground;
     MqttConnectOptions options = null;
     MqttClient client = null;
     MemoryPersistence memPer = null;
@@ -62,10 +65,19 @@ public class MainActivity extends AppCompatActivity {
 
     IsConnThread isConnThread = null;
 
+    //数码管相关
+    private Typeface typeface;
+    // 设置一个常量，这里就是我们的数码管字体文件
+    private static final String FONT_DIGITAL_7 = "fonts" + File.separator + "digital-7.ttf";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate");
+
+        if (getSupportActionBar() != null){
+            getSupportActionBar().hide();
+        }
 
         setContentView(R.layout.activity_main);
         initView();
@@ -117,6 +129,8 @@ public class MainActivity extends AppCompatActivity {
         digitalTube = (Spinner)findViewById(R.id.digitalTubeID);
 
         subscribe = (Button) findViewById(R.id.subscribeID);
+        digital = (TextView) findViewById(R.id.digitalID);
+        digitalbackground = (TextView) findViewById(R.id.digitalbackgroundID);
 
         statImage = (ImageView)findViewById(R.id.statusImage);
         statText = (TextView)findViewById(R.id.statusText);
@@ -127,6 +141,13 @@ public class MainActivity extends AppCompatActivity {
         light[3] = (ImageView)findViewById(R.id.light4_ID);
         light[4] = (ImageView)findViewById(R.id.light5_ID);
         light[5] = (ImageView)findViewById(R.id.light6_ID);
+
+        typeface = Typeface.createFromAsset(getAssets(), FONT_DIGITAL_7);
+        // 设置字体
+        digital.setTypeface(typeface);
+        digitalbackground.setTypeface(typeface);
+        digital.setText("888888");
+        digitalbackground.setText("888888");
     }
 
     private void setOnClickListener(){

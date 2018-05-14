@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:layout_width="match_parent"
+    android:layout_height="120dp"
+    android:layout_gravity="bottom"
+    android:orientation="horizontal"
+    android:gravity="bottom"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="120dp"
+        android:orientation="vertical"
+        android:gravity="center|bottom">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="90dp"
+            android:orientation="horizontal"
+            android:layout_gravity="center"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:src="@mipmap/led_green"
+                android:id="@+id/led2_ID" />
+
+            <View
+                android:layout_width="10dp"
+                android:layout_height="10dp"/>
+
+            <ImageView
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:src="@mipmap/led_green"
+                android:id="@+id/led3_ID" />
+
+            <View
+                android:layout_width="10dp"
+                android:layout_height="10dp"/>
+
+            <ImageView
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:src="@mipmap/led_green"
+                android:id="@+id/led4_ID" />
+
+            <View
+                android:layout_width="10dp"
+                android:layout_height="10dp"/>
+
+            <ImageView
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:src="@mipmap/led_green"
+                android:id="@+id/led5_ID" />
+
+            <View
+                android:layout_width="10dp"
+                android:layout_height="10dp"/>
+
+            <ImageView
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:src="@mipmap/led_green"
+                android:id="@+id/led6_ID" />
+
+            <View
+                android:layout_width="10dp"
+                android:layout_height="10dp"/>
+
+            <ImageView
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:src="@mipmap/led_green"
+                android:id="@+id/led7_ID" />
+
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="bottom|center"
+            android:layout_gravity="center"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="LED Status"
+                android:textColor="@color/white"
+                android:gravity="center"
+                android:textStyle="bold"/>
+
+            <Spinner
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:entries="@array/ledStatus"
+                android:gravity="center"
+                android:id="@+id/ledID">
+            </Spinner>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="120dp"
+        android:orientation="vertical"
+        android:gravity="bottom|center">
+
+
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/digitalID"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:shadowColor="@color/lime"
+                android:shadowDx="0"
+                android:shadowDy="0"
+                android:shadowRadius="20"
+                android:textColor="@color/aqua"
+                android:textSize="50sp" />
+
+            <TextView
+                android:id="@+id/digitalbackgroundID"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerHorizontal="true"
+                android:layout_centerVertical="true"
+                android:textColor="#3300ff00"
+                android:textSize="50sp" />
+        </RelativeLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center|bottom">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Digital Tube"
+                android:textColor="@color/white"
+                android:gravity="center"
+                android:textStyle="bold"/>
+
+            <Spinner
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:entries="@array/digitalTubeID"
+                android:gravity="center"
+                android:id="@+id/digitalTubeID">
+            </Spinner>
+
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
