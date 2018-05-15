@@ -1,6 +1,5 @@
 package com.aplex.aplexmqttcontrol;
 
-import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
@@ -8,8 +7,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -17,27 +14,10 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.MqttCallback;
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.File;
-import java.util.Random;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements Icontract.IbaseView{
     private String TAG = "MainActivity";
-
-    String serverURI = "baidumap.mqtt.iot.gz.baidubce.com";    //url
-    Integer port = 1883;                                //端口
-    String clientId;                            //客户端ID
-    String userName = "baidumap/iotmap";            //用户名
-    char[] password = "bjBb+EUd5rwfo9fBaZUMlwG8psde+abMx35m/euTUfE=".toCharArray();  //秘钥
 
     Spinner deviceOption;
     Spinner led;
@@ -45,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
     Spinner city;
 
     ImageView light[];
+    ImageView ledImage[];
     ImageView statImage;
     TextView statText;
     TextView temp;
@@ -52,24 +33,15 @@ public class MainActivity extends AppCompatActivity {
     Button subscribe;
     TextView digital;
     TextView digitalbackground;
-    MqttConnectOptions options = null;
-    MqttClient client = null;
-    MemoryPersistence memPer = null;
-
-    int ledValue;
-    int digitalTubeValue;
-    String gatewayValue;    //
-    String cityValue;
-    String subscribeTopic;    //
-    String publishTopic;
-
-    IsConnThread isConnThread = null;
 
     //数码管相关
     private Typeface typeface;
     // 设置一个常量，这里就是我们的数码管字体文件
     private static final String FONT_DIGITAL_7 = "fonts" + File.separator + "digital-7.ttf";
 
+    Presenter presenter = new Presenter();
+
+    Thread ledThread = null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -78,51 +50,17 @@ public class MainActivity extends AppCompatActivity {
         if (getSupportActionBar() != null){
             getSupportActionBar().hide();
         }
-
         setContentView(R.layout.activity_main);
+
+        presenter.initPresenter(this, this);
         initView();
-        initMqtt();
+        presenter.initMqtt();
         setOnClickListener();
-    }
-
-
-    class IsConnThread extends Thread{
-        @Override
-        public void run() {
-            super.run();
-            while (!Thread.currentThread().isInterrupted() && !client.isConnected()){
-
-                disCommHandler();
-                try {
-                    Thread.sleep(10000);
-                    Log.d(TAG, "Threadid="+Thread.currentThread().getName());
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    break;
-                }
-            }
-//            if(client==null || !client.isConnected()){
-//                disCommHandler();
-//            }
-            //while (!isInterrupted()){
-//            while (!Thread.currentThread().isInterrupted()){
-//                if(client==null || !client.isConnected()){
-//                    disCommHandler();
-//                }
-//                try {
-//                    Thread.sleep(10000);
-//                    Log.d(TAG, "Threadid="+Thread.currentThread().getName());
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                    break;
-//                }
-//            }
-        }
     }
 
     private void initView(){
         light = new ImageView[10];
-
+        ledImage = new ImageView[8];
         deviceOption  = (Spinner)findViewById(R.id.devOptID);
         led = (Spinner)findViewById(R.id.ledID);
         city = (Spinner)findViewById(R.id.cityOptID);
@@ -142,6 +80,15 @@ public class MainActivity extends AppCompatActivity {
         light[4] = (ImageView)findViewById(R.id.light5_ID);
         light[5] = (ImageView)findViewById(R.id.light6_ID);
 
+        ledImage[0] = (ImageView)findViewById(R.id.led1_ID);
+        ledImage[1] = (ImageView)findViewById(R.id.led2_ID);
+        ledImage[2] = (ImageView)findViewById(R.id.led3_ID);
+        ledImage[3] = (ImageView)findViewById(R.id.led4_ID);
+        ledImage[4] = (ImageView)findViewById(R.id.led5_ID);
+        ledImage[5] = (ImageView)findViewById(R.id.led6_ID);
+        ledImage[6] = (ImageView)findViewById(R.id.led7_ID);
+        ledImage[7] = (ImageView)findViewById(R.id.led8_ID);
+
         typeface = Typeface.createFromAsset(getAssets(), FONT_DIGITAL_7);
         // 设置字体
         digital.setTypeface(typeface);
@@ -151,37 +98,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setOnClickListener(){
+
         subscribe.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String status = subscribe.getText().toString();
                 if(status.equals("Subscribe")){
-                    String currentTopic;
+
                     status="Unsubscribe";
-                    currentTopic = "computex/"+cityValue+"/iot/" + gatewayValue + "/DataTransfer";
-                    publishTopic = "computex/"+cityValue+"/iot/" + gatewayValue + "/backend";
-
-                    SharedPreferences sp = getSharedPreferences("mydata", 0);
-                    SharedPreferences.Editor ed = sp.edit();
-                    ed.putString("publishTopic", publishTopic);
-                    ed.putString("subscribeTopic", subscribeTopic);
-                    ed.apply();
-
-                    subscribeTopic = currentTopic;
                     //订阅主题
-                    subscribeTopic(subscribeTopic);
+                    presenter.mqttSubscribeTopic();
                     //发送led
-                    publishLed();
+                    presenter.publishLed();
                     //发送数码管
-                    publishDigitalTube();
+                    presenter.publishDigitalTube();
                     subscribe.setText(status);
 
                 }else{
                     status = "Subscribe";
                     subscribe.setText(status);
-                    if(subscribeTopic != null){
-                        unsubscribeTopic(subscribeTopic);
-                    }
+                    presenter.mqttUnsubscribeTopic();
                 }
             }
         });
@@ -190,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 String[] city = getResources().getStringArray(R.array.cityOptionValue);
-                cityValue = city[i];
+                presenter.setCityValue(city[i]);
             }
 
             @Override
@@ -203,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 String[] gateway = getResources().getStringArray(R.array.deviceOptionValue);
-                gatewayValue = gateway[i];
+                presenter.setGatewayValue(gateway[i]);
             }
 
             @Override
@@ -216,10 +152,13 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 String[] value = getResources().getStringArray(R.array.ledStatusValue);
-                ledValue = Integer.valueOf(value[i]);
-                if(!gatewayValue.equals("0")) {
-                    publishLed();
+                presenter.setLedValue(Integer.valueOf(value[i]));
+                Log.d(TAG, "led...");
+                if(!presenter.getGatewayValue().equals("0")) {
+                    presenter.mqttPublish();
+                    ledShow(Integer.valueOf(value[i]), Integer.valueOf(value[i]));
                 }
+                ledShow(Integer.valueOf(value[i]), Integer.valueOf(value[i]));//测试，要去掉
             }
 
             @Override
@@ -232,10 +171,13 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 String[] res = getResources().getStringArray(R.array.digitalTubeID);
-                digitalTubeValue = Integer.valueOf(res[i]);
-                if(!gatewayValue.equals("0")) {
-                    publishDigitalTube();
+                presenter.setDigitalTubeValue(Integer.valueOf(res[i]));
+                if(!presenter.getGatewayValue().equals("0")) {
+                    presenter.publishDigitalTube();
+                    digitalTubeShow(Integer.valueOf(res[i]));
                 }
+                digitalTubeShow(Integer.valueOf(res[i]));   //测试，到时候去掉
+                //digital.setText(String.valueOf(digitalTubeShow(Integer.valueOf(res[i]))));
             }
 
             @Override
@@ -244,216 +186,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-    }
-
-    private void publishLed(){
-        if(!client.isConnected()){
-            return;
-        }
-        JSONObject jsonObject = new JSONObject();
-        try {
-            jsonObject.put("gateway_id", gatewayValue);
-            jsonObject.put("device_id", 1);
-            jsonObject.put("funcode", 2);
-            jsonObject.put("value", ledValue);
-            Log.d(TAG, "发送：gateway_id="+gatewayValue+"; device_id="+1+"; funcode="+2+"; value="+ledValue);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        try {
-            MqttMessage message = new MqttMessage();
-            message.setPayload(jsonObject.toString().getBytes());
-            Log.d(TAG, "publishTopic="+publishTopic);
-            client.publish(publishTopic, message);
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private  void publishDigitalTube(){
-        JSONObject jsonObject = new JSONObject();
-        if(!client.isConnected()){
-            return;
-        }
-
-        try {
-            jsonObject.put("gateway_id", gatewayValue);
-            jsonObject.put("device_id", 1);
-            jsonObject.put("funcode", 3);
-            jsonObject.put("value", digitalTubeValue);
-            Log.d(TAG, "发送：gateway_id="+gatewayValue+"; device_id="+1+"; funcode="+3+"; value="+digitalTubeValue);
-
-            MqttMessage message = new MqttMessage();
-            message.setPayload(jsonObject.toString().getBytes());
-            Log.d(TAG, "publishTopic="+publishTopic);
-            client.publish(publishTopic, message);
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }catch (JSONException e){
-            e.printStackTrace();
-        }
-    }
-    private void subscribeTopic(String topic){
-        if(!client.isConnected()){
-            return;
-        }
-        try {
-            Log.d(TAG, "subscribeTopic: "+topic);
-            client.subscribe(topic);
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void unsubscribeTopic(String topic){
-        if(!client.isConnected()){
-            return;
-        }
-        try {
-            Log.d(TAG, "unsubscribeTopic: "+topic);
-            client.unsubscribe(topic);
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void initMqtt(){
-        //实例化MQTT连接对象
-        options = new MqttConnectOptions();
-        //清缓存
-        options.setCleanSession(true);
-        options.setUserName(userName);
-        options.setPassword(password);
-        options.setConnectionTimeout(5);
-        options.setKeepAliveInterval(10);
-
-        memPer = new MemoryPersistence();
-        //实例化MQTT客户端对象
-        Random  random=new Random();
-        clientId = "DeviceID-Android-"+String.valueOf(random.nextInt(999999));
-        Log.d(TAG, "clientID："+clientId);
-        try {
-            client = new MqttClient("tcp://"+serverURI+":"+String.valueOf(port), clientId, memPer);
-            client.setCallback(mqttCallback);
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Log.d(TAG,"连接...");
-                    client.connect(options);
-                    Log.d(TAG,"连接成功...");
-                } catch (MqttException e) {
-                    e.printStackTrace();
-                }
-                new Handler(Looper.getMainLooper()).post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if(client.isConnected()){
-                            Toast.makeText(MainActivity.this, "连接成功", Toast.LENGTH_SHORT).show();
-                            statImage.setImageResource(R.mipmap.led_blue);
-                            statText.setText("已连接");
-                        }
-                    }
-                });
-            }
-        }).start();
-    }
-
-    private MqttCallback mqttCallback = new MqttCallback() {
-
-        @Override
-        public void messageArrived(String topic, MqttMessage message) throws Exception {
-            String msg = new String(message.getPayload());
-            JSONObject jsonPayload = new JSONObject(msg);
-            String gateway = jsonPayload.getString("gateway_id");
-            String device = jsonPayload.getString("device_id");
-            String funcode = jsonPayload.getString("funcode");
-            final String value = jsonPayload.getString("value");
-
-            Log.d(TAG, "接收：gateway_id="+gateway+"; device_id="+device+"; funcode="+funcode+"; value="+value);
-            //按键状态
-            if(Integer.valueOf(funcode)==1){
-                new Handler(Looper.getMainLooper()).post(new Runnable() {
-                    @Override
-                    public void run() {
-                        for(int i=0; i<6; i++){
-                            if((Integer.valueOf(value)>>i & 0x01) == 0x01){
-                                light[i].setImageResource(R.mipmap.led_green);
-                            }else{
-                                light[i].setImageResource(R.mipmap.led_gray);
-                            }
-                        }
-                    }
-                });
-            }else if(Integer.valueOf(funcode)==4){
-                new Handler(Looper.getMainLooper()).post(new Runnable() {
-                    @Override
-                    public void run() {
-                        temp.setText(value+"℃");
-                    }
-                });
-            }
-        }
-
-        @Override
-        public void deliveryComplete(IMqttDeliveryToken arg0) {
-            Log.d(TAG, "deliveryComplete");
-        }
-
-        @Override
-        public void connectionLost(Throwable arg0) {
-            Log.d(TAG, "Mqtt出事连接，重连");
-            isConnThread = new IsConnThread();
-            isConnThread.start();
-        }
-    };
-
-    private void disCommHandler(){
-        if(client==null){
-            Log.d(TAG, "init mqtt");
-            initMqtt();
-        }else {
-            Log.d(TAG, "reconnect mqtt");
-
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-
-                    new Handler(Looper.getMainLooper()).post(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(MainActivity.this, "已断开，正在重新连接中...", Toast.LENGTH_SHORT).show();
-                            statImage.setImageResource(R.mipmap.led_gray);
-                            statText.setText("未连接");
-                        }
-                    });
-
-                    try {
-                        //可能阻塞
-                        Log.d(TAG,"连接...");
-                        client.connect(options);
-                        Log.d(TAG,"连接成功...");
-                    } catch (MqttException e) {
-                        e.printStackTrace();
-                    }
-                    new Handler(Looper.getMainLooper()).post(new Runnable() {
-                        @Override
-                        public void run() {
-                            if(client.isConnected()){
-                                Toast.makeText(MainActivity.this, "连接成功", Toast.LENGTH_SHORT).show();
-                                statImage.setImageResource(R.mipmap.led_blue);
-                                statText.setText("已连接");
-                            }
-                        }
-                    });
-                }
-            }).start();
-        }
     }
 
     @Override
@@ -466,19 +198,122 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         Log.d(TAG, "onStart");
-
-        SharedPreferences sp = getSharedPreferences("mydata", 0);
-        publishTopic = sp.getString("publishTopic", null);
-        subscribeTopic = sp.getString("subscribeTopic", null);
+        presenter.viewStart();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
         Log.d(TAG, "onStop");
-        if(isConnThread!=null){
-            isConnThread.interrupt();
-            isConnThread = null;
+        presenter.viewStop();
+    }
+
+    int cntTmp = 0;
+    @Override
+    public void ledShow(final int status, int ledIndex) {
+
+        if(ledThread != null){
+            ledThread.interrupt();
+            ledThread = null;
         }
+
+        ledThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                int tmp = 0;
+                while (!Thread.currentThread().isInterrupted()) {
+
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            switch (status){
+                                case 1:
+                                    for(int i=0; i<8; i++){
+                                        ledImage[i].setImageResource(R.mipmap.led_green);
+                                    }
+                                    break;
+                                case 2:
+                                    for(int i=0; i<8; i++){
+                                        ledImage[i].setImageResource(R.mipmap.led_gray);
+                                    }
+                                    break;
+                                case 3:
+                                    for(int i=0; i<8; i++){
+                                        if(cntTmp%2==0){
+                                            ledImage[i].setImageResource(R.mipmap.led_gray);
+                                        }else {
+                                            ledImage[i].setImageResource(R.mipmap.led_green);
+                                        }
+                                    }
+                                    break;
+                                case 4:
+                                    for(int i=0; i<8; i++){
+                                        if(cntTmp==i){
+                                            ledImage[i].setImageResource(R.mipmap.led_green);
+                                        }else{
+                                            ledImage[i].setImageResource(R.mipmap.led_gray);
+                                        }
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    });
+
+                    cntTmp = ++cntTmp%8;
+
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        cntTmp = 0;
+                        break;
+                    }
+                }
+
+            }
+        });
+        ledThread.start();
+    }
+
+    @Override
+    public void digitalTubeShow(int num) {
+        if(num > 9){
+            return;
+        }
+//        String Num = String.valueOf(num);
+        String Num  = String.format("%d%d%d%d%d%d%d%d", num,num,num,num,num,num,num,num);
+        Log.d(TAG, "改变后为:"+Num);
+        digital.setText(Num);
+    }
+
+    @Override
+    public void netConnStatusShow(boolean isConn) {
+        if(isConn){
+            // 网络已连接上
+            statImage.setImageResource(R.mipmap.led_blue);
+            statText.setText("已连接");
+            Toast.makeText(MainActivity.this, "连接成功", Toast.LENGTH_SHORT).show();
+        }else{
+            statImage.setImageResource(R.mipmap.led_gray);
+            statText.setText("未连接");
+        }
+    }
+
+    @Override
+    public void buttonStatusShow(int bitValue) {
+        for(int i=0; i<6; i++){
+            if((bitValue>>i & 0x01) == 0x01){
+                light[i].setImageResource(R.mipmap.led_green);
+            }else{
+                light[i].setImageResource(R.mipmap.led_gray);
+            }
+        }
+    }
+
+    @Override
+    public void tempShow(String tempo) {
+        temp.setText(tempo+"℃");
     }
 }

@@ -23,7 +23,17 @@
             <ImageView
                 android:layout_width="25dp"
                 android:layout_height="25dp"
-                android:src="@mipmap/led_green"
+                android:src="@mipmap/led_gray"
+                android:id="@+id/led1_ID" />
+
+            <View
+                android:layout_width="10dp"
+                android:layout_height="10dp"/>
+
+            <ImageView
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:src="@mipmap/led_gray"
                 android:id="@+id/led2_ID" />
 
             <View
@@ -33,7 +43,7 @@
             <ImageView
                 android:layout_width="25dp"
                 android:layout_height="25dp"
-                android:src="@mipmap/led_green"
+                android:src="@mipmap/led_gray"
                 android:id="@+id/led3_ID" />
 
             <View
@@ -43,7 +53,7 @@
             <ImageView
                 android:layout_width="25dp"
                 android:layout_height="25dp"
-                android:src="@mipmap/led_green"
+                android:src="@mipmap/led_gray"
                 android:id="@+id/led4_ID" />
 
             <View
@@ -53,7 +63,7 @@
             <ImageView
                 android:layout_width="25dp"
                 android:layout_height="25dp"
-                android:src="@mipmap/led_green"
+                android:src="@mipmap/led_gray"
                 android:id="@+id/led5_ID" />
 
             <View
@@ -63,7 +73,7 @@
             <ImageView
                 android:layout_width="25dp"
                 android:layout_height="25dp"
-                android:src="@mipmap/led_green"
+                android:src="@mipmap/led_gray"
                 android:id="@+id/led6_ID" />
 
             <View
@@ -73,9 +83,18 @@
             <ImageView
                 android:layout_width="25dp"
                 android:layout_height="25dp"
-                android:src="@mipmap/led_green"
+                android:src="@mipmap/led_gray"
                 android:id="@+id/led7_ID" />
 
+            <View
+                android:layout_width="10dp"
+                android:layout_height="10dp"/>
+
+            <ImageView
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:src="@mipmap/led_gray"
+                android:id="@+id/led8_ID" />
 
         </LinearLayout>
 
