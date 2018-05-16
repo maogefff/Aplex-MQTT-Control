@@ -34,6 +34,8 @@ public class MainActivity extends AppCompatActivity implements Icontract.IbaseVi
     TextView digital;
     TextView digitalbackground;
 
+    boolean ShowLedNoPublish = false;
+    boolean ShowDigtalTubeNoPublish = false;
     //数码管相关
     private Typeface typeface;
     // 设置一个常量，这里就是我们的数码管字体文件
@@ -90,7 +92,7 @@ public class MainActivity extends AppCompatActivity implements Icontract.IbaseVi
         ledImage[7] = (ImageView)findViewById(R.id.led8_ID);
 
         typeface = Typeface.createFromAsset(getAssets(), FONT_DIGITAL_7);
-        // 设置字体
+        // 设置数码管
         digital.setTypeface(typeface);
         digitalbackground.setTypeface(typeface);
         digital.setText("888888");
@@ -98,7 +100,7 @@ public class MainActivity extends AppCompatActivity implements Icontract.IbaseVi
     }
 
     private void setOnClickListener(){
-
+        //订阅按键
         subscribe.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -108,10 +110,6 @@ public class MainActivity extends AppCompatActivity implements Icontract.IbaseVi
                     status="Unsubscribe";
                     //订阅主题
                     presenter.mqttSubscribeTopic();
-                    //发送led
-                    presenter.publishLed();
-                    //发送数码管
-                    presenter.publishDigitalTube();
                     subscribe.setText(status);
 
                 }else{
@@ -121,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements Icontract.IbaseVi
                 }
             }
         });
-
+        //选择城市
         city.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
@@ -153,12 +151,13 @@ public class MainActivity extends AppCompatActivity implements Icontract.IbaseVi
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 String[] value = getResources().getStringArray(R.array.ledStatusValue);
                 presenter.setLedValue(Integer.valueOf(value[i]));
-                Log.d(TAG, "led...");
-                if(!presenter.getGatewayValue().equals("0")) {
-                    presenter.mqttPublish();
-                    ledShow(Integer.valueOf(value[i]), Integer.valueOf(value[i]));
+
+                if(ShowLedNoPublish==true){
+                    ledShow(Integer.valueOf(value[i]));
+                }else if(!presenter.getGatewayValue().equals("0")) {
+                    presenter.publishLed();
+                    ledShow(Integer.valueOf(value[i]));
                 }
-                ledShow(Integer.valueOf(value[i]), Integer.valueOf(value[i]));//测试，要去掉
             }
 
             @Override
@@ -172,12 +171,13 @@ public class MainActivity extends AppCompatActivity implements Icontract.IbaseVi
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 String[] res = getResources().getStringArray(R.array.digitalTubeID);
                 presenter.setDigitalTubeValue(Integer.valueOf(res[i]));
-                if(!presenter.getGatewayValue().equals("0")) {
+
+                if(ShowDigtalTubeNoPublish==true){
+                    digitalTubeShow(Integer.valueOf(res[i]));
+                }else if(!presenter.getGatewayValue().equals("0")) {
                     presenter.publishDigitalTube();
                     digitalTubeShow(Integer.valueOf(res[i]));
                 }
-                digitalTubeShow(Integer.valueOf(res[i]));   //测试，到时候去掉
-                //digital.setText(String.valueOf(digitalTubeShow(Integer.valueOf(res[i]))));
             }
 
             @Override
@@ -209,18 +209,19 @@ public class MainActivity extends AppCompatActivity implements Icontract.IbaseVi
     }
 
     int cntTmp = 0;
-    @Override
-    public void ledShow(final int status, int ledIndex) {
+
+    public void ledShow(final int status) {
 
         if(ledThread != null){
             ledThread.interrupt();
             ledThread = null;
         }
-
+//
         ledThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 int tmp = 0;
+
                 while (!Thread.currentThread().isInterrupted()) {
 
                     new Handler(Looper.getMainLooper()).post(new Runnable() {
@@ -277,15 +278,27 @@ public class MainActivity extends AppCompatActivity implements Icontract.IbaseVi
         ledThread.start();
     }
 
-    @Override
     public void digitalTubeShow(int num) {
         if(num > 9){
             return;
         }
-//        String Num = String.valueOf(num);
         String Num  = String.format("%d%d%d%d%d%d%d%d", num,num,num,num,num,num,num,num);
-        Log.d(TAG, "改变后为:"+Num);
+        Log.d(TAG, "数码管显示为："+Num);
         digital.setText(Num);
+    }
+
+    @Override
+    public void changeLedShow(final int status) {
+        ShowLedNoPublish = true;
+        led.setSelection(status,true);
+        ShowLedNoPublish = false;
+    }
+
+    @Override
+    public void changeDigitalTubeShow(int num) {
+        ShowDigtalTubeNoPublish = true;
+        digitalTube.setSelection(num,true);
+        ShowDigtalTubeNoPublish = false;
     }
 
     @Override

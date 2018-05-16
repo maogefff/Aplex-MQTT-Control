@@ -10,14 +10,15 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 public interface Icontract {
     interface IbaseModel{
-//        String readNodeID();
         void mqttSubscribeTopic(String topic);
         void mqttUnsubscribeTopic(String topic);
         void mqttPublish(String topic, MqttMessage message);
     }
     interface IbaseView{
-        void ledShow(int status, int ledIndex);
-        void digitalTubeShow(int num);
+//        void ledShow(int status);
+//        void digitalTubeShow(int num);
+        void changeLedShow(int status);
+        void changeDigitalTubeShow(int num);
         void netConnStatusShow(boolean isConn);
         void buttonStatusShow(int bitValue);
         void tempShow(String temp);
@@ -27,7 +28,6 @@ public interface Icontract {
         void initMqtt();
         void viewStop();
         void viewStart();
-        void mqttPublish();        //发布
         void mqttSubscribeTopic();    //订阅接收主题
         void mqttUnsubscribeTopic();  //取消订阅
         void publishLed();
@@ -41,6 +41,5 @@ public interface Icontract {
         int getDigitalTubeValue();
         void setCityValue(String value);
         String getCityValue();
-//        void mqtt
     }
 }

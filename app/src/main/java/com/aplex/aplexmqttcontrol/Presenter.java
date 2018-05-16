@@ -45,10 +45,14 @@ public class Presenter implements Icontract.IbasePresenter {
     int digitalTubeValue;
     String gatewayValue;    //
     String cityValue;
-    String subscribeTopic;    //
-    String publishTopic;
 
     IsConnThread isConnThread = null;
+
+    String mqttTopicLed;
+    String mqttTopicDigitalTube;
+    String mqttTopicBtn;
+    String mqttTopicTemp;
+
     @Override
     public void initPresenter(Icontract.IbaseView view, Context context) {
         this.view = view;
@@ -103,7 +107,7 @@ public class Presenter implements Icontract.IbasePresenter {
     }
 
     private MqttCallback mqttCallback = new MqttCallback() {
-
+        //在这里接收
         @Override
         public void messageArrived(String topic, MqttMessage message) throws Exception {
             String msg = new String(message.getPayload());
@@ -116,17 +120,40 @@ public class Presenter implements Icontract.IbasePresenter {
             Log.d(TAG, "接收：gateway_id="+gateway+"; device_id="+device+"; funcode="+funcode+"; value="+value);
             //按键状态
             if(Integer.valueOf(funcode)==1){
+                Log.d(TAG, "修改按键状态,value="+Integer.valueOf(value));
                 new Handler(Looper.getMainLooper()).post(new Runnable() {
                     @Override
                     public void run() {
                         view.buttonStatusShow(Integer.valueOf(value));
                     }
                 });
-            }else if(Integer.valueOf(funcode)==4){
+            }
+            //LED状态
+            else if(Integer.valueOf(funcode)==2){
+                Log.d(TAG, "修改LED状态,value="+Integer.valueOf(value));
                 new Handler(Looper.getMainLooper()).post(new Runnable() {
                     @Override
                     public void run() {
-//                        temp.setText(value+"℃");
+                        view.changeLedShow(Integer.valueOf(value)-1);
+                    }
+                });
+            }
+            //数码管状态
+            else if(Integer.valueOf(funcode)==3){
+                Log.d(TAG, "修改数码管状态,value="+Integer.valueOf(value));
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        view.changeDigitalTubeShow(Integer.valueOf(value));
+                    }
+                });
+            }
+            //温度状态
+            else if(Integer.valueOf(funcode)==4){
+                Log.d(TAG, "修改温度状态,value="+value);
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
                         view.tempShow(value);
                     }
                 });
@@ -175,14 +202,16 @@ public class Presenter implements Icontract.IbasePresenter {
     @Override
     public void viewStart() {
         SharedPreferences sp = context.getSharedPreferences("mydata", 0);
-        publishTopic = sp.getString("publishTopic", null);
-        subscribeTopic = sp.getString("subscribeTopic", null);
+        mqttTopicLed = sp.getString("mqttTopicLed", null);
+        mqttTopicDigitalTube = sp.getString("mqttTopicDigitalTube", null);
+        mqttTopicBtn = sp.getString("mqttTopicBtn", null);
+        mqttTopicTemp = sp.getString("mqttTopicTemp", null);
     }
 
     private void disCommHandler(){
         if(client==null){
             Log.d(TAG, "init mqtt");
-//            initMqtt();
+            initMqtt();
         }else {
             Log.d(TAG, "reconnect mqtt");
 
@@ -219,49 +248,37 @@ public class Presenter implements Icontract.IbasePresenter {
     }
 
     @Override
-    public void mqttPublish() {
-        if(!client.isConnected()){
-            return;
-        }
-        JSONObject jsonObject = new JSONObject();
-        try {
-            jsonObject.put("gateway_id", gatewayValue);
-            jsonObject.put("device_id", 1);
-            jsonObject.put("funcode", 2);
-            jsonObject.put("value", ledValue);
-            Log.d(TAG, "发送：gateway_id="+gatewayValue+"; device_id="+1+"; funcode="+2+"; value="+ledValue);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        try {
-            MqttMessage message = new MqttMessage();
-            message.setPayload(jsonObject.toString().getBytes());
-            Log.d(TAG, "publishTopic="+publishTopic);
-            client.publish(publishTopic, message);
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
     public void mqttSubscribeTopic() {
 
         if(!client.isConnected()){
             return;
         }
-        subscribeTopic = "computex/" + cityValue + "/iot/" + gatewayValue + "/DataTransfer";
-        publishTopic = "computex/"+cityValue+"/iot/" + gatewayValue + "/backend";
+        //订阅主题
+//        subscribeTopic = "computex/" + cityValue + "/iot/" + gatewayValue + "/DataTransfer";//老主题，不再使用
+        mqttTopicLed = "computex/"+cityValue+"/iot/"+gatewayValue+"/ledBackend";
+        mqttTopicDigitalTube = "computex/"+cityValue+"/iot/"+gatewayValue+"/numBackend";
+        mqttTopicBtn = "computex/"+cityValue+"/iot/"+gatewayValue+"/btnData";
+        mqttTopicTemp = "computex/"+cityValue+"/iot/"+gatewayValue+"/tempData";
 
+        //发布主题
         SharedPreferences sp = context.getSharedPreferences("mydata", 0);
         SharedPreferences.Editor ed = sp.edit();
-        ed.putString("publishTopic", publishTopic);
-        ed.putString("subscribeTopic", subscribeTopic);
+        ed.putString("mqttTopicLed", mqttTopicLed);
+        ed.putString("mqttTopicDigitalTube", mqttTopicDigitalTube);
+        ed.putString("mqttTopicBtn", mqttTopicBtn);
+        ed.putString("mqttTopicTemp", mqttTopicTemp);
         ed.apply();
 
         try {
-            Log.d(TAG, "subscribeTopic: "+subscribeTopic);
-            client.subscribe(subscribeTopic);
+            Log.d(TAG, "mqttTopicLed: "+mqttTopicLed);
+            Log.d(TAG, "mqttTopicDigitalTube: "+mqttTopicDigitalTube);
+            Log.d(TAG, "mqttTopicBtn: "+mqttTopicBtn);
+            Log.d(TAG, "mqttTopicTemp: "+mqttTopicTemp);
+//            client.subscribe(subscribeTopic);
+            client.subscribe(mqttTopicLed);
+            client.subscribe(mqttTopicDigitalTube);
+            client.subscribe(mqttTopicBtn);
+            client.subscribe(mqttTopicTemp);
         } catch (MqttException e) {
             e.printStackTrace();
         }
@@ -285,9 +302,10 @@ public class Presenter implements Icontract.IbasePresenter {
 
         try {
             MqttMessage message = new MqttMessage();
+            message.setRetained(true);
             message.setPayload(jsonObject.toString().getBytes());
-            Log.d(TAG, "publishTopic="+publishTopic);
-            client.publish(publishTopic, message);
+            Log.d(TAG, "publishTopic="+mqttTopicLed);
+            client.publish(mqttTopicLed, message);
         } catch (MqttException e) {
             e.printStackTrace();
         }
@@ -308,9 +326,10 @@ public class Presenter implements Icontract.IbasePresenter {
             Log.d(TAG, "发送：gateway_id="+gatewayValue+"; device_id="+1+"; funcode="+3+"; value="+digitalTubeValue);
 
             MqttMessage message = new MqttMessage();
+            message.setRetained(true);
             message.setPayload(jsonObject.toString().getBytes());
-            Log.d(TAG, "publishTopic="+publishTopic);
-            client.publish(publishTopic, message);
+            Log.d(TAG, "publishTopic="+mqttTopicDigitalTube);
+            client.publish(mqttTopicDigitalTube, message);
         } catch (MqttException e) {
             e.printStackTrace();
         }catch (JSONException e){
@@ -323,10 +342,35 @@ public class Presenter implements Icontract.IbasePresenter {
         if(!client.isConnected()){
             return;
         }
-        if(subscribeTopic != null){
+
+        if(mqttTopicLed != null){
             try {
-                Log.d(TAG, "unsubscribeTopic: "+subscribeTopic);
-                client.unsubscribe(subscribeTopic);
+                Log.d(TAG, "unsubscribeTopic: "+mqttTopicLed);
+                client.unsubscribe(mqttTopicLed);
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        }
+        if(mqttTopicDigitalTube != null){
+            try {
+                Log.d(TAG, "unsubscribeTopic: "+mqttTopicDigitalTube);
+                client.unsubscribe(mqttTopicDigitalTube);
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        }
+        if(mqttTopicBtn != null){
+            try {
+                Log.d(TAG, "unsubscribeTopic: "+mqttTopicBtn);
+                client.unsubscribe(mqttTopicBtn);
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        }
+        if(mqttTopicTemp != null){
+            try {
+                Log.d(TAG, "unsubscribeTopic: "+mqttTopicTemp);
+                client.unsubscribe(mqttTopicTemp);
             } catch (MqttException e) {
                 e.printStackTrace();
             }
