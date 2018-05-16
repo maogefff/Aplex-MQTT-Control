@@ -151,8 +151,9 @@ public class MainActivity extends AppCompatActivity implements Icontract.IbaseVi
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 String[] value = getResources().getStringArray(R.array.ledStatusValue);
                 presenter.setLedValue(Integer.valueOf(value[i]));
-
+                Log.d(TAG,"hj...111");
                 if(ShowLedNoPublish==true){
+                    Log.d(TAG,"hj...222");
                     ledShow(Integer.valueOf(value[i]));
                 }else if(!presenter.getGatewayValue().equals("0")) {
                     presenter.publishLed();
@@ -221,7 +222,7 @@ public class MainActivity extends AppCompatActivity implements Icontract.IbaseVi
             @Override
             public void run() {
                 int tmp = 0;
-
+                Log.d(TAG,"hj...333, status="+status);
                 while (!Thread.currentThread().isInterrupted()) {
 
                     new Handler(Looper.getMainLooper()).post(new Runnable() {
@@ -290,7 +291,8 @@ public class MainActivity extends AppCompatActivity implements Icontract.IbaseVi
     @Override
     public void changeLedShow(final int status) {
         ShowLedNoPublish = true;
-        led.setSelection(status,true);
+        Log.d(TAG,"hj...444");
+        led.setSelection(status-1,true);
         ShowLedNoPublish = false;
     }
 

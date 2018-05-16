@@ -134,7 +134,7 @@ public class Presenter implements Icontract.IbasePresenter {
                 new Handler(Looper.getMainLooper()).post(new Runnable() {
                     @Override
                     public void run() {
-                        view.changeLedShow(Integer.valueOf(value)-1);
+                        view.changeLedShow(Integer.valueOf(value));
                     }
                 });
             }
